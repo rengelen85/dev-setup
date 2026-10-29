@@ -5,7 +5,8 @@ Bootstrap a new dev machine with:
 - **[gh](https://cli.github.com/)**: GitHub CLI. It's installed, logged in, and set up as git's credential helper.
 - **[uv](https://docs.astral.sh/uv/)**: Python package and project manager.
 - **[Go](https://go.dev/)**: latest stable release, from the official tarball.
-- **[Claude Code](https://docs.claude.com/en/docs/claude-code/setup)**: installed with the native installer.
+- **[Claude Code](https://docs.claude.com/en/docs/claude-code/setup)**: installed with the native installer, plus
+  a `git-workflow` skill (Conventional Commits, feature branches).
 
 Works on Debian/Ubuntu (including WSL), Fedora/RHEL, and macOS (requires Homebrew).
 
@@ -38,6 +39,7 @@ install.sh        bootstrap → make install
 Makefile          install / check / lint / auth targets
 site.yml          playbook and its settings (go_version, go_prefix, PATH entries)
 roles/<tool>/     one role per tool; role name = tag
+roles/claude_code/files  skills copied to ~/.claude/
 roles/shell_path  managed PATH block in ~/.bashrc and ~/.zshrc
 ```
 

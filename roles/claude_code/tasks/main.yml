@@ -10,3 +10,10 @@
   register: claude_update
   changed_when: "'Successfully updated' in claude_update.stdout"
   failed_when: false
+
+- name: Install Claude Code skills
+  ansible.builtin.copy:
+    src: skills/
+    dest: "{{ ansible_facts.env.HOME }}/.claude/skills/"
+    mode: preserve
+
