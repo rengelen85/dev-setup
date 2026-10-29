@@ -3,7 +3,7 @@
 # to hand over to `make install`, which configures everything else.
 #
 # Usage: ./install.sh [tool...]    e.g. ./install.sh go uv   (default: all)
-#   tools: gh, uv, go, claude_code
+#   tools: gh, uv, go, node, docker, mkcert, aws, claude_code
 #
 # Supports Debian/Ubuntu (incl. WSL), Fedora/RHEL, and macOS (via Homebrew).
 # Safe to re-run.

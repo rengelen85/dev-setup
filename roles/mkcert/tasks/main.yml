@@ -1,0 +1,30 @@
+# Trusted local HTTPS certificates. Run `mkcert -install` once yourself to
+# create the local CA and add it to your trust stores.
+- name: Install mkcert (apt)
+  when: ansible_facts.pkg_mgr == 'apt'
+  become: true
+  ansible.builtin.apt:
+    name: [mkcert, libnss3-tools]
+    state: latest
+
+# Not packaged for Fedora/RHEL; use the upstream release binary.
+- name: Install mkcert (dnf)
+  when: ansible_facts.pkg_mgr == 'dnf'
+  become: true
+  block:
+    - name: Install NSS tools
+      ansible.builtin.dnf:
+        name: nss-tools
+        state: latest
+
+    - name: Download mkcert
+      ansible.builtin.get_url:
+        url: "https://dl.filippo.io/mkcert/latest?for=linux/{{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'amd64' }}"
+        dest: /usr/local/bin/mkcert
+        mode: "0755"
+
+- name: Install mkcert (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: [mkcert, nss]
+    state: latest

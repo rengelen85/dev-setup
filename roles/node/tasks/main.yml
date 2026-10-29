@@ -1,0 +1,59 @@
+- name: Install Node.js (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: node
+    state: latest
+
+# Lives in the user's home so `npm install -g` works without sudo.
+- name: Install Node.js (official tarball)
+  when: not is_macos
+  vars:
+    node_root: "{{ ansible_facts.env.HOME }}/.local/node"
+  block:
+    - name: Install extraction tools
+      become: true
+      ansible.builtin.package:
+        name: "{{ 'xz' if ansible_facts.pkg_mgr == 'dnf' else 'xz-utils' }}"
+        state: present
+
+    - name: Look up latest Node.js LTS version
+      when: not node_version
+      ansible.builtin.uri:
+        url: https://nodejs.org/dist/index.json
+        return_content: true
+      register: node_index
+      check_mode: false
+
+    - name: Resolve Node.js version
+      ansible.builtin.set_fact:
+        node_wanted: >-
+          {{ node_version | regex_replace('^v', '')
+             or (node_index.json | selectattr('lts') | first).version | regex_replace('^v', '') }}
+
+    - name: Check installed Node.js version
+      ansible.builtin.command: "{{ node_root }}/bin/node --version"
+      register: node_installed
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Install Node.js {{ node_wanted }}
+      when: node_installed.stdout != 'v' + node_wanted
+      block:
+        - name: Remove previous Node.js
+          ansible.builtin.file:
+            path: "{{ node_root }}"
+            state: absent
+
+        - name: Create Node.js directory
+          ansible.builtin.file:
+            path: "{{ node_root }}"
+            state: directory
+            mode: "0755"
+
+        - name: Download and extract Node.js
+          ansible.builtin.unarchive:
+            src: "https://nodejs.org/dist/v{{ node_wanted }}/node-v{{ node_wanted }}-linux-{{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'x64' }}.tar.xz"
+            dest: "{{ node_root }}"
+            remote_src: true
+            extra_opts: [--strip-components=1]
