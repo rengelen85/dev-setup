@@ -6,8 +6,7 @@ Bootstrap a new dev machine with:
 - **[uv](https://docs.astral.sh/uv/)**: Python package and project manager.
 - **[Go](https://go.dev/)**: latest stable release, from the official tarball.
 - **[Claude Code](https://docs.claude.com/en/docs/claude-code/setup)**: installed with the native installer, plus
-  a `git-workflow` skill (Conventional Commits, feature branches) and a hook that
-  blocks Claude from committing or pushing to `main`/`master`.
+  a `git-workflow` skill (Conventional Commits, feature branches).
 
 Works on Debian/Ubuntu (including WSL), Fedora/RHEL, and macOS (requires Homebrew).
 
@@ -40,7 +39,7 @@ install.sh        bootstrap → make install
 Makefile          install / check / lint / auth targets
 site.yml          playbook and its settings (go_version, go_prefix, PATH entries)
 roles/<tool>/     one role per tool; role name = tag
-roles/claude_code/files  skills and hooks copied to ~/.claude/
+roles/claude_code/files  skills copied to ~/.claude/
 roles/shell_path  managed PATH block in ~/.bashrc and ~/.zshrc
 ```
 

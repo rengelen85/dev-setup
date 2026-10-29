@@ -7,7 +7,7 @@ description: Git conventions for committing and branching. Use whenever creating
 
 ## Branches
 
-- Never commit or push directly to `main` or `master`. A PreToolUse hook blocks it.
+- Never commit or push directly to `main` or `master`.
 - Before the first commit of a task, check the branch with `git branch --show-current`.
   If it's `main`/`master`, create a feature branch from an up-to-date default branch:
   ```bash
@@ -48,8 +48,7 @@ Use a heredoc so the body formats correctly:
 git commit -F - <<'EOF'
 feat(claude_code): add git-workflow skill
 
-Install a skill for conventional commits and feature branches, plus a
-hook that blocks commits and pushes to main.
+Install a skill for conventional commits and feature branches.
 EOF
 ```
 
