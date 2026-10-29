@@ -1,0 +1,97 @@
+# JDK + Android SDK command-line tools, without Android Studio. Projects install
+# their own pinned SDK packages (platforms, NDK, CMake) with sdkmanager.
+- name: Install JDK and emulator libraries (apt)
+  when: ansible_facts.pkg_mgr == 'apt'
+  become: true
+  ansible.builtin.apt:
+    name: ["openjdk-{{ java_version }}-jdk", libpulse0, unzip]
+    state: latest
+    update_cache: true
+
+- name: Install JDK and emulator libraries (dnf)
+  when: ansible_facts.pkg_mgr == 'dnf'
+  become: true
+  ansible.builtin.dnf:
+    name: ["java-{{ java_version }}-openjdk-devel", pulseaudio-libs, unzip]
+    state: latest
+
+- name: Install JDK (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: "openjdk@{{ java_version }}"
+    state: latest
+
+# The emulator needs /dev/kvm. Takes effect on next login.
+- name: Check for kvm group
+  when: not is_macos
+  ansible.builtin.getent:
+    database: group
+    key: kvm
+    fail_key: false
+
+- name: Add user to kvm group
+  when: not is_macos and ansible_facts.getent_group.kvm is not none
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_facts.env.USER }}"
+    groups: kvm
+    append: true
+
+- name: Install Android SDK
+  vars:
+    sdk_root: "{{ ansible_facts.env.HOME }}/{{ android_sdk_dir }}"
+    sdkmanager: "{{ sdk_root }}/cmdline-tools/latest/bin/sdkmanager"
+  # Homebrew's JDK is keg-only, so sdkmanager can't find it on PATH.
+  environment: "{{ {'JAVA_HOME': java_home_macos} if is_macos else {} }}"
+  block:
+    - name: Check for Android SDK command-line tools
+      ansible.builtin.stat:
+        path: "{{ sdkmanager }}"
+      register: sdkmanager_stat
+
+    # Only bootstraps sdkmanager; the SDK packages below update through it.
+    - name: Install Android SDK command-line tools
+      when: not sdkmanager_stat.stat.exists
+      block:
+        - name: Create command-line tools directory
+          ansible.builtin.file:
+            path: "{{ sdk_root }}/cmdline-tools"
+            state: directory
+            mode: "0755"
+
+        - name: Download and extract Android SDK command-line tools
+          ansible.builtin.unarchive:
+            src: "https://dl.google.com/android/repository/commandlinetools-{{ 'mac' if is_macos else 'linux' }}-{{ android_cmdline_tools_build }}_latest.zip"
+            dest: "{{ sdk_root }}/cmdline-tools"
+            remote_src: true
+
+        - name: Move command-line tools into latest/
+          ansible.builtin.command:
+            cmd: mv cmdline-tools latest
+            chdir: "{{ sdk_root }}/cmdline-tools"
+            creates: "{{ sdk_root }}/cmdline-tools/latest"
+
+    - name: Accept Android SDK licenses
+      ansible.builtin.shell: "yes | {{ sdkmanager }} --licenses"
+      changed_when: false
+      check_mode: false
+
+    - name: List installed Android SDK packages
+      ansible.builtin.command: "{{ sdkmanager }} --list_installed"
+      register: sdk_installed
+      changed_when: false
+      check_mode: false
+
+    - name: Install Android SDK packages
+      vars:
+        sdk_missing: >-
+          {{ android_sdk_packages | reject('in', sdk_installed.stdout_lines
+             | map('regex_replace', '^\s*(\S+)\s*\|.*$', '\1')) | list }}
+      when: sdk_missing | length > 0
+      ansible.builtin.command:
+        argv: "{{ [sdkmanager, '--install'] + sdk_missing }}"
+
+    - name: Update Android SDK packages
+      ansible.builtin.command: "{{ sdkmanager }} --update"
+      register: sdk_update
+      changed_when: "'No updates available' not in sdk_update.stdout"
