@@ -10,3 +10,41 @@
   register: claude_update
   changed_when: "'Successfully updated' in claude_update.stdout"
   failed_when: false
+
+- name: Install Claude Code skills
+  ansible.builtin.copy:
+    src: skills/
+    dest: "{{ ansible_facts.env.HOME }}/.claude/skills/"
+    mode: preserve
+
+- name: Install Claude Code hooks
+  ansible.builtin.copy:
+    src: hooks/
+    dest: "{{ ansible_facts.env.HOME }}/.claude/hooks/"
+    mode: "0755"
+
+# Merge the hook into settings.json, keeping the user's other settings and hooks.
+- name: Read Claude Code settings
+  ansible.builtin.slurp:
+    src: "{{ ansible_facts.env.HOME }}/.claude/settings.json"
+  register: claude_settings_raw
+  failed_when: false
+
+- name: Register protect-main hook in Claude Code settings
+  vars:
+    claude_settings: >-
+      {{ (claude_settings_raw.content | b64decode | from_json)
+         if claude_settings_raw.content is defined else {} }}
+    claude_hooks:
+      hooks:
+        PreToolUse:
+          - matcher: Bash
+            hooks:
+              - type: command
+                command: "{{ ansible_facts.env.HOME }}/.claude/hooks/protect-main.py"
+  ansible.builtin.copy:
+    content: |
+      {{ claude_settings | combine(claude_hooks, recursive=true, list_merge='append_rp')
+         | to_nice_json(indent=2) }}
+    dest: "{{ ansible_facts.env.HOME }}/.claude/settings.json"
+    mode: "0644"
