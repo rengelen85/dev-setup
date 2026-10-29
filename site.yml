@@ -10,13 +10,28 @@
     node_version: ""
     docker_packages:
       [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+    java_version: 17
+    # Bootstrap build of the Android command-line tools; sdkmanager updates the rest.
+    # From https://developer.android.com/studio#command-line-tools-only
+    android_cmdline_tools_build: "13114758"
+    android_sdk_packages: [platform-tools, emulator]
 
     is_macos: "{{ ansible_facts.system == 'Darwin' }}"
+    # Relative to $HOME; the same location Android Studio uses.
+    android_sdk_dir: "{{ 'Library/Android/sdk' if is_macos else 'Android/Sdk' }}"
+    java_home_macos: >-
+      {{ '/opt/homebrew' if ansible_facts.architecture == 'arm64' else '/usr/local' }}/opt/openjdk@{{ java_version }}/libexec/openjdk.jdk/Contents/Home
     # Added to PATH in ~/.bashrc and ~/.zshrc. Fixed list, so installing a
     # subset of tools via TAGS never drops another tool's entry.
     path_dirs: >-
       {{ ['$HOME/.local/bin', '$HOME/go/bin']
-         + ([] if is_macos else [go_prefix + '/go/bin', '$HOME/.local/node/bin']) }}
+         + ([] if is_macos else [go_prefix + '/go/bin', '$HOME/.local/node/bin'])
+         + (['platform-tools', 'emulator', 'cmdline-tools/latest/bin']
+            | map('regex_replace', '^', '$HOME/' + android_sdk_dir + '/') | list) }}
+    # Exported in ~/.bashrc and ~/.zshrc when the directory exists.
+    env_dirs: >-
+      {{ {'ANDROID_HOME': '$HOME/' + android_sdk_dir}
+         | combine({'JAVA_HOME': java_home_macos} if is_macos else {}) }}
   roles:
     - { role: gh, tags: [gh] }
     - { role: uv, tags: [uv] }
@@ -25,5 +40,6 @@
     - { role: docker, tags: [docker] }
     - { role: mkcert, tags: [mkcert] }
     - { role: aws, tags: [aws] }
+    - { role: android, tags: [android] }
     - { role: claude_code, tags: [claude_code] }
     - { role: shell_path, tags: [always] }

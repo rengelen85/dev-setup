@@ -13,6 +13,10 @@ Bootstrap a new dev machine with:
 - **[mkcert](https://github.com/FiloSottile/mkcert)**: local HTTPS certs. Run `mkcert -install`
   once to create and trust the local CA.
 - **[AWS CLI](https://aws.amazon.com/cli/)**: v2, from the official installer into `~/.local`.
+- **[Android SDK](https://developer.android.com/tools)**: JDK 17 plus the command-line tools,
+  platform-tools and emulator in `~/Android/Sdk` (macOS: `~/Library/Android/sdk`), without
+  Android Studio. Sets `ANDROID_HOME` and adds you to the `kvm` group. Projects install their
+  own platforms, NDK and CMake with `sdkmanager`.
 - **[Claude Code](https://docs.claude.com/en/docs/claude-code/setup)**: installed with the native installer, plus
   a `git-workflow` skill (Conventional Commits, feature branches).
 
@@ -36,6 +40,7 @@ make install TAGS=go,claude_code     # subset
 make check                           # dry run with diff
 make install ARGS="-e go_version=1.25.3"
 make install ARGS="-e node_version=24.11.0"
+make install TAGS=android ARGS="-e java_version=21"
 make install BECOME=                 # passwordless sudo: no password prompt
 ```
 
@@ -49,7 +54,7 @@ Makefile          install / check / lint / auth targets
 site.yml          playbook and its settings (go_version, go_prefix, PATH entries)
 roles/<tool>/     one role per tool; role name = tag
 roles/claude_code/files  skills copied to ~/.claude/
-roles/shell_path  managed PATH block in ~/.bashrc and ~/.zshrc
+roles/shell_path  managed PATH/env block in ~/.bashrc and ~/.zshrc
 ```
 
 To add a tool, create `roles/<name>/tasks/main.yml` and add it to `site.yml` with a

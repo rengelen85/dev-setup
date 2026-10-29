@@ -10,6 +10,9 @@
     path: "{{ item.stat.path }}"
     marker: "# {mark} dev-setup PATH (managed by Ansible)"
     block: |
+      {% for name, dir in env_dirs.items() %}
+      if [ -d "{{ dir }}" ]; then export {{ name }}="{{ dir }}"; fi
+      {% endfor %}
       {% for dir in path_dirs | unique %}
       case ":$PATH:" in *":{{ dir }}:"*) ;; *) export PATH="$PATH:{{ dir }}" ;; esac
       {% endfor %}
