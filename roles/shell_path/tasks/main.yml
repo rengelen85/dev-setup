@@ -1,0 +1,18 @@
+- name: Find shell rc files
+  ansible.builtin.stat:
+    path: "{{ ansible_facts.env.HOME }}/{{ item }}"
+  loop: [.bashrc, .zshrc]
+  register: rc_files
+
+- name: Add tool directories to PATH
+  when: item.stat.exists
+  ansible.builtin.blockinfile:
+    path: "{{ item.stat.path }}"
+    marker: "# {mark} dev-setup PATH (managed by Ansible)"
+    block: |
+      {% for dir in path_dirs | unique %}
+      case ":$PATH:" in *":{{ dir }}:"*) ;; *) export PATH="$PATH:{{ dir }}" ;; esac
+      {% endfor %}
+  loop: "{{ rc_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"

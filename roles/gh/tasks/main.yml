@@ -1,0 +1,44 @@
+# Official repo, since distro packages lag far behind:
+# https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+- name: Install gh (apt)
+  when: ansible_facts.pkg_mgr == 'apt'
+  become: true
+  block:
+    - name: Create apt keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add GitHub CLI signing key
+      ansible.builtin.get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /etc/apt/keyrings/githubcli-archive-keyring.gpg
+        mode: "0644"
+
+    - name: Add GitHub CLI apt repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'amd64' }}
+          signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg]
+          https://cli.github.com/packages stable main
+        filename: github-cli
+
+    - name: Install gh
+      ansible.builtin.apt:
+        name: gh
+        state: latest
+        update_cache: true
+
+- name: Install gh (dnf)
+  when: ansible_facts.pkg_mgr == 'dnf'
+  become: true
+  ansible.builtin.dnf:
+    name: gh
+    state: latest
+
+- name: Install gh (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: gh
+    state: latest

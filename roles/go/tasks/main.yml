@@ -1,0 +1,45 @@
+- name: Install Go (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: go
+    state: latest
+
+- name: Install Go (official tarball)
+  when: not is_macos
+  vars:
+    go_root: "{{ go_prefix }}/go"
+  block:
+    - name: Look up latest Go version
+      when: not go_version
+      ansible.builtin.uri:
+        url: https://go.dev/VERSION?m=text
+        return_content: true
+      register: go_latest
+      check_mode: false
+
+    - name: Resolve Go version
+      ansible.builtin.set_fact:
+        go_wanted: "{{ go_version or (go_latest.content.splitlines() | first | regex_replace('^go', '')) }}"
+
+    - name: Check installed Go version
+      ansible.builtin.command: "{{ go_root }}/bin/go env GOVERSION"
+      register: go_installed
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Install Go {{ go_wanted }}
+      when: go_installed.stdout != 'go' + go_wanted
+      become: "{{ go_become }}"
+      block:
+        # Official guidance: remove the old tree rather than extracting over it.
+        - name: Remove previous Go
+          ansible.builtin.file:
+            path: "{{ go_root }}"
+            state: absent
+
+        - name: Download and extract Go
+          ansible.builtin.unarchive:
+            src: "https://go.dev/dl/go{{ go_wanted }}.linux-{{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'amd64' }}.tar.gz"
+            dest: "{{ go_prefix }}"
+            remote_src: true

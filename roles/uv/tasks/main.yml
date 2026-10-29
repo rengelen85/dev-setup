@@ -1,0 +1,22 @@
+- name: Install uv (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: uv
+    state: latest
+
+- name: Install uv (standalone installer)
+  when: not is_macos
+  block:
+    - name: Run uv installer
+      ansible.builtin.shell: curl -LsSf https://astral.sh/uv/install.sh | sh
+      args:
+        creates: "{{ ansible_facts.env.HOME }}/.local/bin/uv"
+      environment:
+        UV_NO_MODIFY_PATH: "1" # shell_path role manages PATH
+
+    - name: Update uv
+      ansible.builtin.command: "{{ ansible_facts.env.HOME }}/.local/bin/uv self update"
+      register: uv_update
+      changed_when: "'Upgraded uv' in uv_update.stderr"
+      # Fails for uv installed by other means; that's not ours to update.
+      failed_when: false

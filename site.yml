@@ -1,0 +1,21 @@
+- name: Set up dev workstation
+  hosts: localhost
+  vars:
+    # Pin with: make install ARGS="-e go_version=1.25.3". Empty means latest stable.
+    go_version: ""
+    # Go is installed in {{ go_prefix }}/go (Linux only; macOS uses Homebrew).
+    go_prefix: /usr/local
+    go_become: true
+
+    is_macos: "{{ ansible_facts.system == 'Darwin' }}"
+    # Added to PATH in ~/.bashrc and ~/.zshrc. Fixed list, so installing a
+    # subset of tools via TAGS never drops another tool's entry.
+    path_dirs: >-
+      {{ ['$HOME/.local/bin', '$HOME/go/bin']
+         + ([] if is_macos else [go_prefix + '/go/bin']) }}
+  roles:
+    - { role: gh, tags: [gh] }
+    - { role: uv, tags: [uv] }
+    - { role: go, tags: [go] }
+    - { role: claude_code, tags: [claude_code] }
+    - { role: shell_path, tags: [always] }
