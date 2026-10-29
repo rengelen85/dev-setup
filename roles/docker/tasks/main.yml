@@ -1,0 +1,73 @@
+# Docker Engine from Docker's own repo (https://docs.docker.com/engine/install/).
+# macOS has no native Engine; use Docker Desktop there.
+- name: Install Docker Engine (apt)
+  when: ansible_facts.pkg_mgr == 'apt'
+  become: true
+  vars:
+    docker_distro: "{{ ansible_facts.distribution | lower }}"
+  block:
+    - name: Create apt keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker signing key
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ docker_distro }}/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'arm64' if ansible_facts.architecture == 'aarch64' else 'amd64' }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/{{ docker_distro }}
+          {{ ansible_facts.distribution_release }} stable
+        filename: docker
+
+    - name: Install Docker Engine
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: latest
+        update_cache: true
+
+- name: Install Docker Engine (dnf)
+  when: ansible_facts.pkg_mgr == 'dnf'
+  become: true
+  block:
+    - name: Add Docker dnf repository
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ 'fedora' if ansible_facts.distribution == 'Fedora' else 'rhel' }}/docker-ce.repo"
+        dest: /etc/yum.repos.d/docker-ce.repo
+        mode: "0644"
+
+    - name: Install Docker Engine
+      ansible.builtin.dnf:
+        name: "{{ docker_packages }}"
+        state: latest
+
+- name: Configure Docker Engine
+  when: not is_macos
+  become: true
+  block:
+    # Takes effect on next login (or `newgrp docker`).
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_facts.env.USER }}"
+        groups: docker
+        append: true
+
+    # WSL only runs services with systemd enabled in /etc/wsl.conf ([boot] systemd=true).
+    - name: Start Docker on boot
+      when: ansible_facts.service_mgr == 'systemd'
+      ansible.builtin.systemd_service:
+        name: docker
+        enabled: true
+        state: started
+
+- name: Docker on macOS
+  when: is_macos
+  ansible.builtin.debug:
+    msg: "Docker Engine isn't installed on macOS; install Docker Desktop: https://docs.docker.com/desktop/setup/install/mac-install/"

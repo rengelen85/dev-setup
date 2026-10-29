@@ -5,6 +5,14 @@ Bootstrap a new dev machine with:
 - **[gh](https://cli.github.com/)**: GitHub CLI. It's installed, logged in, and set up as git's credential helper.
 - **[uv](https://docs.astral.sh/uv/)**: Python package and project manager.
 - **[Go](https://go.dev/)**: latest stable release, from the official tarball.
+- **[Node.js](https://nodejs.org/)**: latest LTS, from the official tarball into `~/.local/node`
+  (so `npm install -g` needs no sudo).
+- **[Docker Engine](https://docs.docker.com/engine/install/)**: from Docker's repo, with buildx
+  and compose; adds you to the `docker` group and starts it via systemd. On WSL, enable
+  systemd in `/etc/wsl.conf` first. macOS: install Docker Desktop yourself.
+- **[mkcert](https://github.com/FiloSottile/mkcert)**: local HTTPS certs. Run `mkcert -install`
+  once to create and trust the local CA.
+- **[AWS CLI](https://aws.amazon.com/cli/)**: v2, from the official installer into `~/.local`.
 - **[Claude Code](https://docs.claude.com/en/docs/claude-code/setup)**: installed with the native installer, plus
   a `git-workflow` skill (Conventional Commits, feature branches).
 
@@ -27,6 +35,7 @@ make install                         # deps + playbook + gh login
 make install TAGS=go,claude_code     # subset
 make check                           # dry run with diff
 make install ARGS="-e go_version=1.25.3"
+make install ARGS="-e node_version=24.11.0"
 make install BECOME=                 # passwordless sudo: no password prompt
 ```
 

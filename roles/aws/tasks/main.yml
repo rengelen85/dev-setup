@@ -1,0 +1,59 @@
+- name: Install AWS CLI (Homebrew)
+  when: is_macos
+  community.general.homebrew:
+    name: awscli
+    state: latest
+
+# Official v2 installer (https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
+# installed in the user's home so updates don't need sudo.
+- name: Install AWS CLI (official installer)
+  when: not is_macos
+  vars:
+    aws_bin: "{{ ansible_facts.env.HOME }}/.local/bin/aws"
+  block:
+    - name: Install extraction tools
+      become: true
+      ansible.builtin.package:
+        name: "unzip"
+        state: present
+
+    - name: Look up latest AWS CLI version
+      ansible.builtin.uri:
+        url: https://raw.githubusercontent.com/aws/aws-cli/v2/CHANGELOG.rst
+        return_content: true
+      register: aws_changelog
+      check_mode: false
+
+    - name: Check installed AWS CLI version
+      ansible.builtin.command: "{{ aws_bin }} --version"
+      register: aws_installed
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Install AWS CLI {{ aws_wanted }}
+      vars:
+        aws_wanted: "{{ aws_changelog.content | regex_search('(?m)^\\d+\\.\\d+\\.\\d+$') }}"
+      when: not aws_installed.stdout.startswith('aws-cli/' + aws_wanted + ' ')
+      block:
+        - name: Create temporary directory
+          ansible.builtin.tempfile:
+            state: directory
+          register: aws_tmp
+
+        - name: Download and extract AWS CLI installer
+          ansible.builtin.unarchive:
+            src: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_facts.architecture }}.zip"
+            dest: "{{ aws_tmp.path }}"
+            remote_src: true
+
+        - name: Run AWS CLI installer
+          ansible.builtin.command: >-
+            {{ aws_tmp.path }}/aws/install --update
+            -i {{ ansible_facts.env.HOME }}/.local/aws-cli
+            -b {{ ansible_facts.env.HOME }}/.local/bin
+
+        - name: Remove temporary directory
+          ansible.builtin.file:
+            path: "{{ aws_tmp.path }}"
+            state: absent
